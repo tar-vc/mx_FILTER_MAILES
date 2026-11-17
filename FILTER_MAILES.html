@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d18">
+  <title>Email Domain Filter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000;
+      --panel: #080808;
+      --panel-2: #000;
+      --border: #555;
+      --muted: #aaa;
+      --text: #fff;
+      --blue: #2196f3;
+      --blue-hover: #1565c0;
+      --green: #16852b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 36px 18px;
+      background: #000;
+      color: var(--text);
+      font: 15px/1.5 Arial, Helvetica, sans-serif;
+    }
+    .container { width: min(100%, 1040px); margin: 0 auto; }
+    header { margin-bottom: 26px; }
+    h1 { margin: 0 0 7px; font-size: clamp(27px, 5vw, 36px); letter-spacing: -.7px; }
+    .subtitle { margin: 0; color: var(--muted); }
+    .panel {
+      padding: 22px;
+      background: rgba(17, 24, 39, .94);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: none;
+    }
+    .inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    label { display: block; margin-bottom: 9px; font-weight: 700; }
+    .hint { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 205px;
+      resize: vertical;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      background: var(--panel-2);
+      color: var(--text);
+      font: 14px/1.6 Consolas, Monaco, monospace;
+    }
+    textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #3b82f622; }
+    .drop-area {
+      min-height: 205px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      text-align: center;
+      border: 2px dashed #40516b;
+      border-radius: 10px;
+      background: var(--panel-2);
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .drop-area.active, .drop-area:hover { border-color: var(--blue); background: #17243a; }
+    .drop-area.uploaded { border-color: var(--green); }
+    .drop-icon { font-size: 32px; }
+    .drop-area strong { font-size: 15px; }
+    .drop-area small { color: var(--muted); }
+    input[type=file] { display: none; }
+    .file-name { max-width: 100%; overflow-wrap: anywhere; color: #86efac; font-size: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    button {
+      min-height: 43px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease, transform .15s ease;
+    }
+    button:hover { background: var(--blue-hover); }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #263449; }
+    button.secondary:hover { background: #34465f; }
+    button.green { background: #15803d; }
+    button.green:hover { background: #166534; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .notice {
+      margin-top: 15px;
+      padding: 11px 13px;
+      border: 1px solid #334155;
+      border-radius: 9px;
+      color: var(--muted);
+      background: #0b1220;
+      font-size: 13px;
+    }
+    .results { margin-top: 22px; }
+    .results-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    h2 { margin: 0; font-size: 19px; }
+    .count { color: #93c5fd; font-weight: 700; }
+    #resultList {
+      margin: 0;
+      padding: 10px;
+      max-height: 350px;
+      overflow: auto;
+      list-style: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel-2);
+    }
+    #resultList li {
+      padding: 8px 10px;
+      border-bottom: 1px solid #263449;
+      overflow-wrap: anywhere;
+      font: 13px/1.5 Consolas, Monaco, monospace;
+    }
+    #resultList li:last-child { border-bottom: 0; }
+    .empty { padding: 18px !important; color: var(--muted); text-align: center; font-family: Arial, sans-serif !important; }
+    .hidden { display: none; }
+    footer { margin-top: 18px; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width: 700px) {
+      body { padding: 24px 12px; }
+      .panel { padding: 15px; }
+      .inputs { grid-template-columns: 1fr; }
+      .actions button { flex: 1 1 140px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Email Domain Filter</h1>
+      <p class="subtitle">Filter an email-address list using the domains you specify.</p>
+    </header>
+
+    <section class="panel">
+      <div class="inputs">
+        <div>
+          <label for="domainsInput">Domains to match</label>
+          <textarea id="domainsInput" spellcheck="false" placeholder="example.com&#10;example.org&#10;mail.net"></textarea>
+          <span class="hint">Enter one domain per line. You can also separate them with commas.</span>
+        </div>
+        <div>
+          <label for="fileInput">Email list file</label>
+          <div class="drop-area" id="dropArea" role="button" tabindex="0" aria-label="Choose or drop a text file">
+            <span class="drop-icon" aria-hidden="true">⇧</span>
+            <strong id="dropTitle">Choose a .txt file or drop it here</strong>
+            <small>Plain text · one email address per line</small>
+            <span class="file-name" id="fileName"></span>
+          </div>
+          <input type="file" id="fileInput" accept=".txt,text/plain">
+          <span class="hint">The file is read locally in your browser and is not uploaded to a server.</span>
+        </div>
+        <div>
+          <label for="pasteInput">Or paste email addresses</label>
+          <textarea id="pasteInput" spellcheck="false" placeholder="name@example.com&#10;another@example.org"></textarea>
+          <span class="hint">Paste email addresses directly here instead of uploading a file.</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="filterBtn" type="button">Filter emails</button>
+        <button id="copyBtn" class="green" type="button" disabled>Copy results</button>
+        <button id="downloadBtn" class="secondary" type="button" disabled>Download TXT</button>
+        <button id="clearBtn" class="secondary" type="button">Clear</button>
+      </div>
+
+      <div class="notice">
+        A selected domain can match anywhere in a line, including lines with surrounding punctuation. Results show matching email addresses only; other text such as passwords is never displayed.
+      </div>
+
+      <section class="results" aria-live="polite">
+        <div class="results-head">
+          <h2>Matching emails</h2>
+          <span class="count" id="resultCount">0 matches</span>
+        </div>
+        <ul id="resultList"><li class="empty">Add domains and a text file, then select Filter emails.</li></ul>
+      </section>
+    </section>
+    <footer>Runs entirely in your browser · No account or backend required</footer>
+  </main>
+
+
+<script>
+    (() => {
+      const domainsInput = document.getElementById('domainsInput');
+      const fileInput = document.getElementById('fileInput');
+      const pasteInput = document.getElementById('pasteInput');
+      const dropArea = document.getElementById('dropArea');
+      const dropTitle = document.getElementById('dropTitle');
+      const fileName = document.getElementById('fileName');
+      const resultList = document.getElementById('resultList');
+      const resultCount = document.getElementById('resultCount');
+      const copyBtn = document.getElementById('copyBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      let fileText = '';
+      let matches = [];
+
+      function showMessage(message) {
+        resultList.replaceChildren();
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = message;
+        resultList.appendChild(li);
+        resultCount.textContent = '0 matches';
+        matches = [];
+        updateButtons();
+      }
+
+      function updateButtons() {
+        const enabled = matches.length > 0;
+        copyBtn.disabled = !enabled;
+        downloadBtn.disabled = !enabled;
+      }
+
+      function loadFile(file) {
+        if (!file) return;
+        if (!/\.txt$/i.test(file.name) && file.type !== 'text/plain') {
+          showMessage('Please choose a plain-text .txt file.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          fileText = String(reader.result || '');
+          dropTitle.textContent = 'File loaded successfully';
+          fileName.textContent = file.name;
+          dropArea.classList.add('uploaded');
+          showMessage('File loaded. Enter your domains and select Filter emails.');
+        };
+        reader.onerror = () => showMessage('The file could not be read. Please try another file.');
+        reader.readAsText(file);
+      }
+
+      dropArea.addEventListener('click', () => fileInput.click());
+      dropArea.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          fileInput.click();
+        }
+      });
+      fileInput.addEventListener('change', event => loadFile(event.target.files[0]));
+
+      ['dragenter', 'dragover'].forEach(type => dropArea.addEventListener(type, event => {
+        event.preventDefault();
+        dropArea.classList.add('active');
+      }));
+      ['dragleave', 'drop'].forEach(type => dropArea.addEventListener(type, event => {
+        event.preventDefault();
+        dropArea.classList.remove('active');
+      }));
+      dropArea.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
+
+      document.getElementById('filterBtn').addEventListener('click', () => {
+        const domains = new Set(
+          domainsInput.value
+            .split(/[\n,;]+/)
+            .map(value => value.trim().toLowerCase().replace(/^@/, '').replace(/\.$/, ''))
+            .filter(Boolean)
+        );
+
+        if (domains.size === 0) {
+          showMessage('Enter at least one domain to filter.');
+          return;
+        }
+        const sourceText = [pasteInput.value, fileText].filter(value => value.trim()).join('\n');
+        if (!sourceText.trim()) {
+          showMessage('Paste email addresses or choose a .txt file first.');
+          return;
+        }
+
+        const seen = new Set();
+        const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+        
+        matches = sourceText.split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => {
+            if (!line) return false;
+
+            const lowerLine = line.toLowerCase();
+            const matchedDomain = [...domains].some(domain => lowerLine.includes(domain));
+            if (!matchedDomain) return false;
+
+            const emails = line.match(emailPattern) || [];
+            const hasMatchingEmail = emails.some(email => {
+              const emailDomain = email.slice(email.lastIndexOf('@') + 1).toLowerCase().replace(/\.$/, '');
+              return [...domains].some(domain => emailDomain === domain || emailDomain.startsWith(domain + '.'));
+            });
+
+            return hasMatchingEmail;
+          })
+          // Replace the first colon separator with a forward slash
+          .map(line => line.replace(':', '/'))
+          // Deduplicate the formatted lines
+          .filter(line => {
+            const key = line.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+        resultList.replaceChildren();
+        if (matches.length === 0) {
+          showMessage('No matching lines found. Check your domains and file format.');
+          return;
+        }
+        const fragment = document.createDocumentFragment();
+        matches.forEach(line => {
+          const li = document.createElement('li');
+          li.textContent = line;
+          fragment.appendChild(li);
+        });
+        resultList.appendChild(fragment);
+        resultCount.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}`;
+        updateButtons();
+      });
+
+      copyBtn.addEventListener('click', async () => {
+        if (!matches.length) return;
+        try {
+          await navigator.clipboard.writeText(matches.join('\n'));
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => copyBtn.textContent = 'Copy results', 1400);
+        } catch {
+          showMessage('Clipboard access was blocked. Use Download TXT instead.');
+        }
+      });
+
+      downloadBtn.addEventListener('click', () => {
+        if (!matches.length) return;
+        const blob = new Blob([matches.join('\n') + '\n'], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'filtered-lines.txt';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        domainsInput.value = '';
+        pasteInput.value = '';
+        fileInput.value = '';
+        fileText = '';
+        matches = [];
+        dropTitle.textContent = 'Choose a .txt file or drop it here';
+        fileName.textContent = '';
+        dropArea.classList.remove('uploaded');
+        showMessage('Add domains and a text file, then select Filter emails.');
+      });
+    })();
+</script>
+
+</body>
+</html>
